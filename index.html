@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>国风雅集·遇见非遗</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.bootcdn.net/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/pixi.js/7.2.4/pixi.min.js"></script>
+</head>
+<body>
+    <div id="game-container">
+        <!-- 第0页：加载页 -->
+        <section class="page active" id="page0">
+            <h2>国风雅集</h2>
+            <p>遇见非遗</p>
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <p id="loading-text">资源加载中...</p>
+            <button class="next-btn" id="start-btn" style="display:none;" onclick="goToPage(1)">开始体验</button>
+        </section>
+
+        <!-- 第1页：皮影戏（拖拽修复：全页面可拖拽） -->
+        <section class="page" id="page1">
+            <h2>壹·皮影拾遗</h2>
+            <p>拖动部件，拼回皮影人偶</p>
+            <div id="shadow-play-area">
+                <div class="outline"></div>
+                <!-- 红色剪纸小人（可拖拽） -->
+                <div class="piece" id="head" data-target="head">
+                    <div class="paper-cut head"></div>
+                </div>
+                <div class="piece" id="body" data-target="body">
+                    <div class="paper-cut body"></div>
+                </div>
+                <div class="piece" id="leg" data-target="leg">
+                    <div class="paper-cut leg"></div>
+                </div>
+            </div>
+            <button class="next-btn" onclick="goToPage(2)">完成拼装 ▶</button>
+        </section>
+
+        <!-- 第2页：剪纸（擦除互动） -->
+        <section class="page" id="page2">
+            <h2>贰·红纸镂空</h2>
+            <p>滑动屏幕，擦去红纸</p>
+            <div class="scratch-container">
+                <canvas id="scratch-canvas" width="300" height="300"></canvas>
+                <!-- 隐藏的小纸人，擦除后显示 -->
+                <div class="hidden-figure" id="hidden-figure"></div>
+            </div>
+            <button class="next-btn" onclick="goToPage(3)">揭开秘密 ▶</button>
+        </section>
+
+        <!-- 第3页：茶百戏（仅绘图） -->
+        <section class="page" id="page3">
+            <h2>叁·茶上作画</h2>
+            <p>在水面绘制水墨</p>
+            <canvas id="ink-canvas" width="350" height="350"></canvas>
+            <button class="next-btn" onclick="goToPage(4)">完成画作 ▶</button>
+        </section>
+
+        <!-- 第4页：答题 -->
+        <section class="page" id="page4">
+            <h2>肆·非遗知多少</h2>
+            <div id="quiz-box">
+                <h3>皮影戏起源于哪个朝代？</h3>
+                <button class="quiz-option" onclick="checkAnswer(this, false)">唐朝</button>
+                <button class="quiz-option" onclick="checkAnswer(this, true)">西汉</button>
+                <button class="quiz-option" onclick="checkAnswer(this, false)">明朝</button>
+            </div>
+            <button class="next-btn" onclick="goToPage(5)">继续探索 ▶</button>
+        </section>
+
+        <!-- 第5页：填写ID（生成证书前） -->
+        <section class="page" id="page5">
+            <h2>伍·落笔生花</h2>
+            <p>请输入你的名字，生成专属证书</p>
+            <div id="writing-pad">
+                <span id="typing-text"></span>
+            </div>
+            <input type="text" id="name-input" placeholder="写下你的名字" oninput="updatePreview()">
+            <div id="preview-certificate" style="display:none; margin-top:20px;">
+                <div id="preview-content">
+                    <h3>非遗传承荣誉证书</h3>
+                    <p id="preview-name"></p>
+                    <p>你已完成国风雅集之旅</p>
+                    <p>特颁此证，以资鼓励</p>
+                </div>
+            </div>
+            <button class="next-btn" onclick="generateCertificate()" id="generate-btn" disabled>生成证书 ▶</button>
+        </section>
+
+        <!-- 第6页：荣誉证书（二维码在右下角，不遮挡文字） -->
+        <section class="page" id="page6">
+            <h2>陆·收藏证书</h2>
+            <div id="final-certificate">
+                <div id="cert-content">
+                    <h3>非遗传承荣誉证书</h3>
+                    <p id="final-name"></p>
+                    <p>你已完成国风雅集之旅</p>
+                    <p>特颁此证，以资鼓励</p>
+                    <p style="margin-top: 20px; font-size: 14px;">扫描下方二维码查看电子证书</p>
+                </div>
+                <!-- 二维码在右下角 -->
+                <div id="final-qrcode" class="qrcode-corner"></div>
+            </div>
+            <button class="next-btn" onclick="alert('作业完成！')">完成</button>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
