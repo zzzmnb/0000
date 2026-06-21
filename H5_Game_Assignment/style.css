@@ -1,229 +1,44 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "SimSun", "STSong", serif; background: #f4f1ea; color: #3e2723; overflow: hidden; }
+#game-container { width: 100vw; height: 100vh; position: relative; }
 
-body {
-    background-color: #1a1a2e;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    overflow: hidden;
+.page { 
+    width: 100%; height: 100%; 
+    position: absolute; top: 0; left: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #f4f1ea url('data:image/svg+xml,...'); /* 宣纸纹理 */
+    opacity: 0; visibility: hidden; transition: opacity 0.5s; padding: 20px; text-align: center;
 }
+.page.active { opacity: 1; visibility: visible; z-index: 1; }
 
-#game-container {
-    width: 375px;
-    height: 667px;
-    background: linear-gradient(180deg, #2c003e 0%, #512b58 100%);
-    border-radius: 20px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 0 30px rgba(255, 105, 180, 0.3);
-}
+/* 第0页 */
+.progress-container { width: 200px; height: 10px; background: #d7ccc8; border-radius: 5px; margin: 20px 0; overflow: hidden; }
+.progress-bar { width: 0%; height: 100%; background: #8d6e63; transition: width 0.3s; }
+#start-btn { margin-top: 20px; padding: 10px 40px; font-size: 18px; background: #5d4037; color: white; border: none; cursor: pointer; }
 
-.page {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-    padding: 40px 20px;
-    color: #fff;
-    text-align: center;
-    opacity: 0;
-    transform: translateX(100%);
-    transition: all 0.5s ease-in-out;
-    z-index: 1;
-}
+/* 第1页 皮影 */
+#shadow-play-area { width: 300px; height: 400px; position: relative; margin-top: 20px; border: 2px dashed #bcaaa4; background: rgba(255,255,255,0.5); }
+.outline { position: absolute; width: 100%; height: 100%; background: url('data:image/svg+xml,...'); opacity: 0.3; } /* 轮廓线 */
+.piece { position: absolute; cursor: grab; touch-action: none; }
+.paper-cut { width: 80px; height: 120px; background: #b71c1c; clip-path: polygon(...); } /* 简化剪纸形状 */
+.head { width: 60px; height: 60px; border-radius: 50%; top: 20px; left: 110px; }
+.body { width: 80px; height: 150px; top: 90px; left: 110px; }
+.leg { width: 80px; height: 120px; top: 250px; left: 110px; }
 
-.page.active {
-    opacity: 1;
-    transform: translateX(0);
-    z-index: 10;
-}
+/* 第2页 擦除 */
+.scratch-container { position: relative; margin-top: 20px; }
+#scratch-canvas { background: #b71c1c; border-radius: 10px; }
+.hidden-figure { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('data:image/svg+xml,...'); } /* 隐藏的小纸人 */
 
-h2 {
-    font-size: 28px;
-    margin-bottom: 10px;
-    color: #f7d039;
-    text-shadow: 2px 2px 4px #000;
-}
+/* 第3页 绘图 */
+canvas { background: #fff; border: 2px solid #8d6e63; border-radius: 10px; margin-top: 20px; touch-action: none; }
 
-/* 加载页 */
-#page0 {
-    background: #1a1a2e;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-.progress-container {
-    width: 80%;
-    height: 20px;
-    background: rgba(255,255,255,0.2);
-    border-radius: 10px;
-    margin: 50px auto;
-    overflow: hidden;
-}
-.progress-bar {
-    width: 0%;
-    height: 100%;
-    background: #f7d039;
-    border-radius: 10px;
-    transition: width 0.3s;
-}
-#loading-text {
-    color: #fff;
-    font-size: 18px;
-    text-align: center;
-}
+/* 第5页 证书预览 */
+#writing-pad { width: 80%; height: 40px; border-bottom: 2px solid #5d4037; margin: 20px 0; font-size: 24px; }
+#preview-certificate { width: 80%; max-width: 350px; padding: 20px; border: 2px solid #8d6e63; background: #fff8e1; margin-top: 20px; }
 
-/* 第1页：红色剪纸小人（拖拽样式已修复） */
-.piece {
-    position: absolute;
-    cursor: grab; /* 显示拖拽手势 */
-    user-select: none;
-    touch-action: none; /* 防止触摸时页面滚动 */
-    z-index: 5;
-}
-.paper-cut {
-    background: #E74C3C;
-    border: 1px solid #8B0000;
-    width: 60px;
-    height: 80px;
-}
-.head {
-    border-radius: 50% 50% 40% 40%;
-    position: relative;
-}
-.head::before {
-    content: '';
-    position: absolute;
-    top: 20px;
-    left: 15px;
-    width: 30px;
-    height: 10px;
-    background: #8B0000;
-    border-radius: 5px;
-}
-.body {
-    width: 80px;
-    height: 100px;
-    border-radius: 10px;
-}
-.leg {
-    width: 20px;
-    height: 100px;
-    border-radius: 5px;
-}
-#head { top: 20px; left: 20px; }
-#body { top: 120px; left: 220px; }
-#leg { top: 250px; left: 130px; }
+/* 第6页 最终证书 */
+#final-certificate { position: relative; width: 90%; max-width: 400px; padding: 30px; border: 3px double #5d4037; background: #fff8e1; }
+.qrcode-corner { position: absolute; right: 15px; bottom: 15px; width: 80px; height: 80px; }
 
-/* 第2页：擦除容器 */
-.scratch-container {
-    position: relative;
-    width: 300px;
-    height: 300px;
-    margin: 20px auto;
-}
-#scratch-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    background: #ccc;
-    border-radius: 10px;
-}
-.hidden-figure {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100px;
-    height: 150px;
-    background: #E74C3C;
-    clip-path: polygon(50% 0%, 100% 30%, 70% 100%, 30% 100%, 0% 30%);
-    display: none;
-}
-
-/* 第3页：茶百戏 */
-#ink-canvas {
-    background: #fff;
-    border-radius: 50%;
-    margin-top: 20px;
-}
-
-/* 通用按钮 */
-.next-btn {
-    position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 12px 30px;
-    background: linear-gradient(90deg, #f7d039, #f7a039);
-    border: none;
-    border-radius: 25px;
-    color: #512b58;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 5px 15px rgba(247, 208, 57, 0.4);
-    z-index: 100;
-}
-
-/* 证书样式 */
-#writing-pad {
-    width: 300px;
-    height: 150px;
-    border: 2px solid #f7d039;
-    margin: 30px auto;
-    font-size: 24px;
-    line-height: 40px;
-    padding: 10px;
-    color: #000;
-    background: #fefefe;
-}
-#typing-text::after {
-    content: '|';
-    animation: blink 1s infinite;
-}
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
-}
-
-/* 预览证书样式 */
-#preview-certificate {
-    background: #fff;
-    color: #333;
-    padding: 20px;
-    border-radius: 10px;
-    margin-top: 20px;
-    position: relative;
-}
-
-/* 最终证书样式 */
-#final-certificate {
-    background: #fff;
-    color: #333;
-    padding: 20px;
-    border-radius: 10px;
-    margin-top: 20px;
-    position: relative;
-    min-height: 400px; /* 确保有足够空间 */
-}
-
-/* 二维码在右下角（不遮挡文字） */
-.qrcode-corner {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    width: 100px;
-    height: 100px;
-    background: white;
-    padding: 5px;
-    border: 1px solid #ddd;
-    z-index: 1; /* 确保在文字下方或旁边 */
-}
+.next-btn { margin-top: 30px; padding: 12px 30px; font-size: 16px; background: #5d4037; color: white; border: 1px solid #3e2723; cursor: pointer; }
