@@ -1,44 +1,149 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: "SimSun", "STSong", serif; background: #f4f1ea; color: #3e2723; overflow: hidden; }
-#game-container { width: 100vw; height: 100vh; position: relative; }
+// 全局变量
+let currentPage = 0;
+const totalPages = 7;
+let scratchCanvas, scratchCtx;
+let inkCanvas, inkCtx;
 
-.page { 
-    width: 100%; height: 100%; 
-    position: absolute; top: 0; left: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: #f4f1ea url('data:image/svg+xml,...'); /* 宣纸纹理 */
-    opacity: 0; visibility: hidden; transition: opacity 0.5s; padding: 20px; text-align: center;
+// 页面切换
+function goToPage(pageNum) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    currentPage = pageNum;
+    document.getElementById(`page${pageNum}`).classList.add('active');
+    
+    // 特定页面初始化
+    if (pageNum === 2) initScratch();
+    if (pageNum === 3) initInk();
+    if (pageNum === 6) generateFinalQRCode();
 }
-.page.active { opacity: 1; visibility: visible; z-index: 1; }
 
-/* 第0页 */
-.progress-container { width: 200px; height: 10px; background: #d7ccc8; border-radius: 5px; margin: 20px 0; overflow: hidden; }
-.progress-bar { width: 0%; height: 100%; background: #8d6e63; transition: width 0.3s; }
-#start-btn { margin-top: 20px; padding: 10px 40px; font-size: 18px; background: #5d4037; color: white; border: none; cursor: pointer; }
+// 模拟加载
+window.onload = function() {
+    let progress = 0;
+    const bar = document.getElementById('progress-bar');
+    const text = document.getElementById('loading-text');
+    const btn = document.getElementById('start-btn');
+    const timer = setInterval(() => {
+        progress += 10;
+        bar.style.width = progress + '%';
+        text.textContent = `资源加载中... ${progress}%`;
+        if (progress >= 100) {
+            clearInterval(timer);
+            text.textContent = '加载完成！';
+            btn.style.display = 'block';
+        }
+    }, 200);
+    
+    initDrag(); // 初始化拖拽
+};
 
-/* 第1页 皮影 */
-#shadow-play-area { width: 300px; height: 400px; position: relative; margin-top: 20px; border: 2px dashed #bcaaa4; background: rgba(255,255,255,0.5); }
-.outline { position: absolute; width: 100%; height: 100%; background: url('data:image/svg+xml,...'); opacity: 0.3; } /* 轮廓线 */
-.piece { position: absolute; cursor: grab; touch-action: none; }
-.paper-cut { width: 80px; height: 120px; background: #b71c1c; clip-path: polygon(...); } /* 简化剪纸形状 */
-.head { width: 60px; height: 60px; border-radius: 50%; top: 20px; left: 110px; }
-.body { width: 80px; height: 150px; top: 90px; left: 110px; }
-.leg { width: 80px; height: 120px; top: 250px; left: 110px; }
+// 初始化拖拽 (Hammer.js)
+function initDrag() {
+    const pieces = document.querySelectorAll('.piece');
+    pieces.forEach(piece => {
+        const hammer = new Hammer(piece);
+        hammer.on('pan', function(e) {
+            piece.style.transform = `translate(${e.deltaX}px, ${e.deltaY}px)`;
+        });
+    });
+}
 
-/* 第2页 擦除 */
-.scratch-container { position: relative; margin-top: 20px; }
-#scratch-canvas { background: #b71c1c; border-radius: 10px; }
-.hidden-figure { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('data:image/svg+xml,...'); } /* 隐藏的小纸人 */
+// 初始化擦除 (Canvas)
+function initScratch() {
+    scratchCanvas = document.getElementById('scratch-canvas');
+    scratchCtx = scratchCanvas.getContext('2d');
+    scratchCtx.fillStyle = '#b71c1c';
+    scratchCtx.fillRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+    
+    let isDrawing = false;
+    scratchCanvas.addEventListener('mousedown', () => isDrawing = true);
+    scratchCanvas.addEventListener('mouseup', () => isDrawing = false);
+    scratchCanvas.addEventListener('mousemove', (e) => {
+        if (!isDrawing) return;
+        const rect = scratchCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        scratchCtx.globalCompositeOperation = 'destination-out';
+        scratchCtx.beginPath();
+        scratchCtx.arc(x, y, 20, 0, Math.PI * 2);
+        scratchCtx.fill();
+    });
+}
 
-/* 第3页 绘图 */
-canvas { background: #fff; border: 2px solid #8d6e63; border-radius: 10px; margin-top: 20px; touch-action: none; }
+// 初始化水墨画
+function initInk() {
+    inkCanvas = document.getElementById('ink-canvas');
+    inkCtx = inkCanvas.getContext('2d');
+    inkCtx.strokeStyle = '#3e2723';
+    inkCtx.lineWidth = 3;
+    inkCtx.lineCap = 'round';
+    
+    let drawing = false;
+    inkCanvas.addEventListener('mousedown', () => drawing = true);
+    inkCanvas.addEventListener('mouseup', () => drawing = false);
+    inkCanvas.addEventListener('mousemove', drawInk);
+}
 
-/* 第5页 证书预览 */
-#writing-pad { width: 80%; height: 40px; border-bottom: 2px solid #5d4037; margin: 20px 0; font-size: 24px; }
-#preview-certificate { width: 80%; max-width: 350px; padding: 20px; border: 2px solid #8d6e63; background: #fff8e1; margin-top: 20px; }
+function drawInk(e) {
+    if (!inkCanvas || !inkCtx) return;
+    const rect = inkCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    if (e.type === 'mousedown') {
+        inkCtx.beginPath();
+        inkCtx.moveTo(x, y);
+    } else if (e.type === 'mousemove') {
+        inkCtx.lineTo(x, y);
+        inkCtx.stroke();
+    }
+}
 
-/* 第6页 最终证书 */
-#final-certificate { position: relative; width: 90%; max-width: 400px; padding: 30px; border: 3px double #5d4037; background: #fff8e1; }
-.qrcode-corner { position: absolute; right: 15px; bottom: 15px; width: 80px; height: 80px; }
+// 答题
+function checkAnswer(btn, isCorrect) {
+    if (isCorrect) {
+        btn.style.background = '#4CAF50';
+    } else {
+        btn.style.background = '#f44336';
+    }
+    setTimeout(() => {
+        document.querySelectorAll('.quiz-option').forEach(b => b.style.background = '');
+    }, 500);
+}
 
-.next-btn { margin-top: 30px; padding: 12px 30px; font-size: 16px; background: #5d4037; color: white; border: 1px solid #3e2723; cursor: pointer; }
+// 证书预览
+function updatePreview() {
+    const name = document.getElementById('name-input').value;
+    const preview = document.getElementById('preview-certificate');
+    const previewName = document.getElementById('preview-name');
+    
+    if (name.length > 0) {
+        preview.style.display = 'block';
+        previewName.textContent = `姓名：${name}`;
+        document.getElementById('generate-btn').disabled = false;
+    } else {
+        preview.style.display = 'none';
+        document.getElementById('generate-btn').disabled = true;
+    }
+}
+
+// 生成最终证书
+function generateCertificate() {
+    const name = document.getElementById('name-input').value;
+    document.getElementById('final-name').textContent = `姓名：${name}`;
+    goToPage(6);
+}
+
+// 生成二维码
+function generateFinalQRCode() {
+    const qrContainer = document.getElementById('final-qrcode');
+    qrContainer.innerHTML = '';
+    // 使用当前页面的URL生成二维码
+    QRCode.toCanvas(qrContainer, window.location.href, { width: 80 }, function (error) {
+        if (error) console.error(error);
+    });
+}
+
+// 重新开始
+function restart() {
+    location.reload();
+}
