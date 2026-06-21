@@ -1,0 +1,246 @@
+// ==================== 页面切换逻辑 ====================
+let currentPage = 0;
+
+function goToPage(pageNum) {
+    // 移除当前页面的active类
+    const currentPageElement = document.getElementById(`page${currentPage}`);
+    if (currentPageElement) {
+        currentPageElement.classList.remove('active');
+    }
+    
+    // 更新当前页码
+    currentPage = pageNum;
+    
+    // 添加新页面的active类
+    const newPageElement = document.getElementById(`page${currentPage}`);
+    if (newPageElement) {
+        newPageElement.classList.add('active');
+    }
+    
+    // 触发特定页面的初始化
+    if (pageNum === 2) initScratch();
+    if (pageNum === 3) initInk();
+}
+
+// ==================== 第0页：加载动画 ====================
+window.addEventListener('load', function() {
+    const progressBar = document.getElementById('progress-bar');
+    const loadingText = document.getElementById('loading-text');
+    const startBtn = document.getElementById('start-btn');
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += 10;
+        progressBar.style.width = `${progress}%`;
+        loadingText.textContent = `加载中... ${progress}%`;
+        if (progress >= 100) {
+            clearInterval(interval);
+            loadingText.textContent = "加载完成！";
+            startBtn.style.display = 'block';
+        }
+    }, 200);
+});
+
+// ==================== 第1页：拖拽互动（彻底修复：全页面可拖拽） ====================
+const pieces = document.querySelectorAll('.piece');
+let activePiece = null;
+let startX = 0, startY = 0; // 鼠标/触摸起始位置
+let initialLeft = 0, initialTop = 0; // 元素初始位置
+
+pieces.forEach(piece => {
+    piece.addEventListener('mousedown', startDrag);
+    piece.addEventListener('touchstart', startDrag, { passive: false });
+});
+
+function startDrag(e) {
+    e.preventDefault();
+    activePiece = this;
+    
+    // 获取元素当前的left和top值
+    initialLeft = parseInt(window.getComputedStyle(activePiece).left) || 0;
+    initialTop = parseInt(window.getComputedStyle(activePiece).top) || 0;
+    
+    // 获取鼠标/触摸起始位置
+    if (e.type === 'mousedown') {
+        startX = e.clientX;
+        startY = e.clientY;
+    } else {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+    }
+    
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('touchmove', drag, { passive: false });
+    document.addEventListener('mouseup', stopDrag);
+    document.addEventListener('touchend', stopDrag);
+}
+
+function drag(e) {
+    if (!activePiece) return;
+    e.preventDefault();
+    
+    let currentX, currentY;
+    
+    if (e.type.includes('mouse')) {
+        currentX = e.clientX;
+        currentY = e.clientY;
+    } else {
+        currentX = e.touches[0].clientX;
+        currentY = e.touches[0].clientY;
+    }
+    
+    // 计算移动距离
+    const deltaX = currentX - startX;
+    const deltaY = currentY - startY;
+    
+    // 计算新位置
+    const newLeft = initialLeft + deltaX;
+    const newTop = initialTop + deltaY;
+    
+    // 获取游戏容器边界
+    const gameContainer = document.getElementById('game-container');
+    const containerRect = gameContainer.getBoundingClientRect();
+    const pieceRect = activePiece.getBoundingClientRect();
+    
+    // 边界限制：确保不超出游戏容器
+    const maxLeft = containerRect.width - pieceRect.width;
+    const maxTop = containerRect.height - pieceRect.height;
+    
+    // 应用边界限制
+    const boundedLeft = Math.max(0, Math.min(newLeft, maxLeft));
+    const boundedTop = Math.max(0, Math.min(newTop, maxTop));
+    
+    // 设置新位置
+    activePiece.style.left = `${boundedLeft}px`;
+    activePiece.style.top = `${boundedTop}px`;
+}
+
+function stopDrag() {
+    activePiece = null;
+    document.removeEventListener('mousemove', drag);
+    document.removeEventListener('touchmove', drag);
+    document.removeEventListener('mouseup', stopDrag);
+    document.removeEventListener('touchend', stopDrag);
+}
+
+// ==================== 第2页：擦除互动 ====================
+let scratchCtx;
+function initScratch() {
+    const canvas = document.getElementById('scratch-canvas');
+    scratchCtx = canvas.getContext('2d');
+    scratchCtx.fillStyle = '#E74C3C';
+    scratchCtx.fillRect(0, 0, canvas.width, canvas.height);
+    scratchCtx.globalCompositeOperation = 'destination-out';
+    
+    let isDrawing = false;
+    canvas.addEventListener('mousemove', (e) => {
+        if (!isDrawing) return;
+        scratchCtx.beginPath();
+        scratchCtx.arc(e.offsetX, e.offsetY, 20, 0, Math.PI * 2);
+        scratchCtx.fill();
+        
+        // 检测擦除面积，显示小纸人
+        checkScratchProgress();
+    });
+    canvas.addEventListener('mousedown', () => isDrawing = true);
+    canvas.addEventListener('mouseup', () => isDrawing = false);
+}
+
+function checkScratchProgress() {
+    const canvas = document.getElementById('scratch-canvas');
+    const imageData = scratchCtx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+    let transparentPixels = 0;
+    
+    for (let i = 3; i < pixels.length; i += 4) {
+        if (pixels[i] === 0) transparentPixels++;
+    }
+    
+    const totalPixels = canvas.width * canvas.height;
+    const percent = transparentPixels / totalPixels;
+    
+    if (percent > 0.3) {
+        document.getElementById('hidden-figure').style.display = 'block';
+    }
+}
+
+// ==================== 第3页：茶百戏（仅绘图） ====================
+let inkCtx;
+function initInk() {
+    const canvas = document.getElementById('ink-canvas');
+    inkCtx = canvas.getContext('2d');
+    inkCtx.strokeStyle = '#000';
+    inkCtx.lineWidth = 5;
+    inkCtx.lineCap = 'round';
+    
+    let drawing = false;
+    canvas.addEventListener('mousemove', (e) => {
+        if (!drawing) return;
+        inkCtx.lineTo(e.offsetX, e.offsetY);
+        inkCtx.stroke();
+    });
+    canvas.addEventListener('mousedown', (e) => {
+        drawing = true;
+        inkCtx.moveTo(e.offsetX, e.offsetY);
+    });
+    canvas.addEventListener('mouseup', () => drawing = false);
+}
+
+// ==================== 第4页：答题反馈 ====================
+function checkAnswer(btn, isCorrect) {
+    if (isCorrect) {
+        btn.style.background = 'green';
+        alert('✅ 正确！皮影戏最早诞生于西汉时期。');
+    } else {
+        btn.style.background = 'red';
+        alert('❌ 错误，再想想看~');
+    }
+}
+
+// ==================== 第5页：填写ID预览 ====================
+function updatePreview() {
+    const name = document.getElementById('name-input').value;
+    const preview = document.getElementById('preview-certificate');
+    const previewName = document.getElementById('preview-name');
+    const generateBtn = document.getElementById('generate-btn');
+    
+    if (name.length > 0) {
+        preview.style.display = 'block';
+        previewName.textContent = `姓名：${name}`;
+        generateBtn.disabled = false;
+        generateBtn.style.opacity = '1';
+        generateBtn.style.cursor = 'pointer';
+    } else {
+        preview.style.display = 'none';
+        generateBtn.disabled = true;
+        generateBtn.style.opacity = '0.5';
+        generateBtn.style.cursor = 'not-allowed';
+    }
+}
+
+// ==================== 第5页：生成证书 ====================
+function generateCertificate() {
+    const name = document.getElementById('name-input').value;
+    if (name.length === 0) {
+        alert('请先输入你的名字！');
+        return;
+    }
+    
+    // 跳转到第6页（荣誉证书）
+    goToPage(6);
+    
+    // 填充证书信息
+    document.getElementById('final-name').textContent = `姓名：${name}`;
+    
+    // 生成二维码（链接到证书页面）
+    document.getElementById('final-qrcode').innerHTML = `
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://example.com/certificate?name=${encodeURIComponent(name)}" width="100">
+    `;
+}
+
+// 初始化第5页按钮状态
+document.addEventListener('DOMContentLoaded', () => {
+    const generateBtn = document.getElementById('generate-btn');
+    generateBtn.disabled = true;
+    generateBtn.style.opacity = '0.5';
+    generateBtn.style.cursor = 'not-allowed';
+});
